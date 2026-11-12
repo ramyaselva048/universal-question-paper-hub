@@ -1,0 +1,6 @@
+{
+  "name": "Universal Question Paper Hub",
+  "description": "Discover, explore, view and download question papers from school, college, university, and competitive examinations worldwide.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
