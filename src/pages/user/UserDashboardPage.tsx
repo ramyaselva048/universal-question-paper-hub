@@ -18,9 +18,10 @@ import {
 
 export const UserDashboardPage: React.FC = () => {
   const { user } = useAuth();
-  const { papers, favoriteIds, downloads, views, openPdfViewer, downloadPaper } = usePapers();
+  const { papers, categories, favoriteIds, downloads, views, openPdfViewer, downloadPaper } = usePapers();
   const navigate = useNavigate();
   const [dashboardSearch, setDashboardSearch] = useState('');
+  const [selectedCategoryTab, setSelectedCategoryTab] = useState('all');
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,10 +39,11 @@ export const UserDashboardPage: React.FC = () => {
     .filter((p): p is typeof papers[0] => Boolean(p))
     .slice(0, 4);
 
-  // Recommendations / Trending papers
-  const trendingPapers = [...papers]
-    .sort((a, b) => (b.downloadCount || 0) - (a.downloadCount || 0))
-    .slice(0, 4);
+  // Filtered display papers based on selected category tab
+  const displayedPapers = papers.filter((p) => {
+    if (selectedCategoryTab === 'all') return true;
+    return p.category === selectedCategoryTab;
+  });
 
   return (
     <div className="space-y-10">
@@ -188,24 +190,62 @@ export const UserDashboardPage: React.FC = () => {
         </div>
       )}
 
-      {/* Recommended / Trending Papers */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
+      {/* Available Question Papers Repository */}
+      <div className="space-y-5">
+        <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-3">
           <div>
-            <h3 className="text-lg font-bold text-deep-charcoal">Popular Across the Hub</h3>
-            <p className="text-xs text-slate-500">High-yield question papers downloaded by peers</p>
+            <h3 className="text-lg font-bold text-deep-charcoal flex items-center gap-2">
+              <span>Question Papers Repository</span>
+              <span className="text-xs font-mono font-bold text-electric-violet bg-soft-lavender px-2 py-0.5 rounded-lg border border-electric-violet/20">
+                {displayedPapers.length} Available
+              </span>
+            </h3>
+            <p className="text-xs text-slate-500">
+              Browse authentic demo question papers with answer keys, view online, or download PDF
+            </p>
           </div>
           <Link
-            to="/browse?sort=most_downloaded"
-            className="text-xs font-bold text-electric-violet hover:underline flex items-center gap-1"
+            to="/browse"
+            className="text-xs font-bold text-electric-violet hover:underline flex items-center gap-1 shrink-0"
           >
-            <span>Browse More</span>
+            <span>Open Advanced Search</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {trendingPapers.map((paper) => (
+        {/* Category Tabs */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+          <button
+            onClick={() => setSelectedCategoryTab('all')}
+            className={`px-3 py-1.5 rounded-xl font-semibold transition-all cursor-pointer whitespace-nowrap ${
+              selectedCategoryTab === 'all'
+                ? 'bg-electric-violet text-white shadow-xs'
+                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+            }`}
+          >
+            All Categories ({papers.length})
+          </button>
+          {categories.map((cat) => {
+            const count = papers.filter((p) => p.category === cat.name).length;
+            return (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedCategoryTab(cat.name)}
+                className={`px-3 py-1.5 rounded-xl font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                  selectedCategoryTab === cat.name
+                    ? 'bg-electric-violet text-white shadow-xs'
+                    : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                }`}
+              >
+                {cat.name} ({count})
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Question Paper Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+          {displayedPapers.map((paper) => (
             <QuestionPaperCard key={paper.id} paper={paper} />
           ))}
         </div>

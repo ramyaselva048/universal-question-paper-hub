@@ -54,7 +54,7 @@ export const QuestionPaperCard: React.FC<QuestionPaperCardProps> = ({
       <div>
         {/* Unboxed Metadata Header (Anti-Slop Zero-Pill Rule) */}
         <div className="flex items-center justify-between text-xs text-slate-500 mb-2.5">
-          <div className="flex items-center gap-1.5 font-medium truncate">
+          <div className="flex items-center gap-1.5 font-medium truncate flex-wrap">
             <span className="text-electric-violet font-semibold truncate">
               {paper.category || 'General Examination'}
             </span>
@@ -64,12 +64,22 @@ export const QuestionPaperCard: React.FC<QuestionPaperCardProps> = ({
                 <span className="font-mono tabular-nums text-slate-600">{paper.year}</span>
               </>
             )}
+            {paper.isDemo && (
+              <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200/90 px-1.5 py-0.5 rounded-md uppercase tracking-wider ml-1">
+                DEMO SAMPLE
+              </span>
+            )}
+            {paper.hasAnswerKey && (
+              <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/90 px-1.5 py-0.5 rounded-md">
+                Answer Key
+              </span>
+            )}
           </div>
 
           <button
             onClick={handleToggleFavorite}
             title={favorited ? 'Remove from favourites' : 'Save to favourites'}
-            className="p-1.5 text-slate-400 hover:text-coral-pink rounded-lg hover:bg-rose-50/60 transition-colors cursor-pointer"
+            className="p-1.5 text-slate-400 hover:text-coral-pink rounded-lg hover:bg-rose-50/60 transition-colors cursor-pointer shrink-0"
           >
             <Heart
               className={`w-4 h-4 transition-colors ${
@@ -86,10 +96,17 @@ export const QuestionPaperCard: React.FC<QuestionPaperCardProps> = ({
           </Link>
         </h3>
 
-        {/* Description if present */}
+        {/* Description & Demo Disclaimer */}
         {paper.description && (
-          <p className="text-xs text-slate-500 line-clamp-2 mb-4 leading-relaxed">
+          <p className="text-xs text-slate-500 line-clamp-2 mb-2 leading-relaxed">
             {paper.description}
+          </p>
+        )}
+
+        {paper.isDemo && (
+          <p className="text-[11px] text-amber-700/90 bg-amber-50/70 rounded-lg px-2.5 py-1 mb-3.5 border border-amber-100 flex items-center gap-1.5 font-medium">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+            <span>Practice sample · Not an official examination paper</span>
           </p>
         )}
       </div>

@@ -45,6 +45,19 @@ export const PdfViewerModal: React.FC = () => {
           isFullscreen ? 'w-full h-full rounded-none' : 'w-full max-w-5xl h-[92vh]'
         }`}
       >
+        {/* Demo Sample Notice Strip */}
+        {activeViewingPaper.isDemo && (
+          <div className="bg-amber-500/20 text-amber-200 border-b border-amber-500/30 px-4 py-1.5 text-xs font-medium flex items-center justify-between shrink-0">
+            <span className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
+              <strong>DEMO SAMPLE DOCUMENT:</strong> This question paper is a verified simulation for academic practice. It is not an official examination paper.
+            </span>
+            <span className="text-[10px] uppercase tracking-wider font-bold bg-amber-500/30 text-amber-100 px-2 py-0.5 rounded">
+              Practice Material
+            </span>
+          </div>
+        )}
+
         {/* Top Control Bar */}
         <div className="bg-[#242933] px-4 py-3 border-b border-slate-700/80 flex items-center justify-between gap-4 shrink-0">
           {/* Title & Metadata */}
@@ -168,214 +181,215 @@ export const PdfViewerModal: React.FC = () => {
           >
             {/* Realistic Exam Paper Sheet (A4 Proportion) */}
             <div className="w-[680px] min-h-[960px] bg-white text-slate-900 p-10 sm:p-14 shadow-2xl rounded-sm border border-slate-300 relative select-text">
-              {/* Official Academic Watermark */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03] select-none">
-                <span className="text-8xl font-black rotate-[-35deg] tracking-widest text-slate-900">
-                  ARCHIVE COPY
+              {/* Official Academic / Demo Watermark */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.04] select-none">
+                <span className="text-7xl font-black rotate-[-35deg] tracking-widest text-slate-900">
+                  {activeViewingPaper.isDemo ? 'DEMO SAMPLE' : 'ARCHIVE COPY'}
                 </span>
               </div>
 
-              {/* Page 1 Header */}
+              {/* Page 1 Header & Section A */}
               {currentPage === 1 && (
                 <div>
-                  <div className="text-center pb-6 border-b-2 border-slate-900 mb-6 space-y-1">
-                    <p className="text-[11px] font-bold tracking-widest uppercase text-slate-500">
-                      Official Repository Archive · Universal Question Paper Hub
+                  {activeViewingPaper.isDemo && (
+                    <div className="bg-amber-50 border border-amber-200/90 text-amber-800 text-[10.5px] font-bold py-1 px-2.5 rounded text-center mb-4 uppercase tracking-wider">
+                      *** DEMO SAMPLE QUESTION PAPER · FOR PRACTICE ONLY · NOT AN OFFICIAL EXAM PAPER ***
+                    </div>
+                  )}
+
+                  <div className="text-center pb-5 border-b-2 border-slate-900 mb-5 space-y-1">
+                    <p className="text-[10px] font-bold tracking-widest uppercase text-slate-500">
+                      {activeViewingPaper.isDemo
+                        ? 'Simulated Academic Practice Series · Universal Question Paper Hub'
+                        : 'Official Repository Archive · Universal Question Paper Hub'}
                     </p>
-                    <h1 className="text-xl font-black text-slate-900 uppercase tracking-tight">
+                    <h1 className="text-lg font-black text-slate-900 uppercase tracking-tight">
                       {activeViewingPaper.title}
                     </h1>
-                    <div className="flex items-center justify-center gap-4 text-xs font-semibold text-slate-700 pt-1">
-                      <span>Discipline: {activeViewingPaper.category || 'General Examination'}</span>
+                    <div className="flex items-center justify-center gap-3 text-xs font-semibold text-slate-700 pt-1 flex-wrap">
+                      <span>Category: {activeViewingPaper.category || 'General Examination'}</span>
                       <span>|</span>
-                      <span>Year: {activeViewingPaper.year || 'Current'}</span>
+                      <span>Year: {activeViewingPaper.year || '2024'}</span>
                       <span>|</span>
-                      <span>Maximum Marks: 100</span>
+                      <span>Max Marks: {activeViewingPaper.maxMarks || 100}</span>
                     </div>
                     <div className="text-[11px] text-slate-600 font-mono">
-                      Time Allowed: 3 Hours · Paper Code: UQPH-{activeViewingPaper.id.slice(-6).toUpperCase()}
+                      Time Allowed: {activeViewingPaper.timeAllowed || '3 Hours'} · Code: UQPH-{activeViewingPaper.id.replace(/[^a-zA-Z0-9]/g, '').slice(-6).toUpperCase()}
                     </div>
                   </div>
 
                   {/* General Instructions */}
-                  <div className="bg-slate-50 border border-slate-200 p-4 rounded-md mb-8 text-xs text-slate-700 space-y-1.5">
+                  <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-md mb-6 text-xs text-slate-700 space-y-1">
                     <p className="font-bold uppercase tracking-wider text-slate-900 text-[11px]">
                       General Instructions to Candidates:
                     </p>
-                    <ol className="list-decimal pl-5 space-y-1 text-slate-600 text-[11.5px] leading-relaxed">
-                      <li>Check that this question paper contains all 3 printed sections and no pages are missing.</li>
-                      <li>Write your Roll Number / Registration ID clearly in the allocated spaces.</li>
-                      <li>Section A is compulsory. Answer any FOUR questions from Section B and any TWO from Section C.</li>
-                      <li>Calculators or approved statistical tables are permitted where specified.</li>
+                    <ol className="list-decimal pl-5 space-y-1 text-slate-600 text-[11px] leading-relaxed">
+                      {(activeViewingPaper.generalInstructions || [
+                        'This question paper is a verified DEMO SAMPLE for academic practice and preparation.',
+                        'Write your Roll Number / Registration ID clearly in the allocated spaces.',
+                        'Section A is compulsory. Answer any optional questions as instructed in subsequent sections.',
+                        'A complete verified Answer Key is available on Page 3 for self-assessment.',
+                      ]).map((inst, i) => (
+                        <li key={i}>{inst.replace(/^[0-9]+\.\s*/, '')}</li>
+                      ))}
                     </ol>
                   </div>
 
-                  {/* Section A */}
-                  <div className="space-y-6">
-                    <div className="flex items-center justify-between border-b border-slate-300 pb-1.5">
-                      <h3 className="font-bold text-sm tracking-wide text-slate-900">
-                        SECTION A — OBJECTIVE & CORE PRINCIPLES
+                  {/* Section A Content */}
+                  <div className="space-y-5">
+                    <div className="flex items-center justify-between border-b border-slate-300 pb-1">
+                      <h3 className="font-bold text-xs tracking-wide text-slate-900 uppercase">
+                        {activeViewingPaper.sections?.[0]?.title || 'SECTION A — OBJECTIVE & CORE PRINCIPLES'}
                       </h3>
-                      <span className="text-xs font-bold text-slate-600 font-mono">(20 Marks)</span>
+                      <span className="text-xs font-bold text-slate-600 font-mono">
+                        ({activeViewingPaper.sections?.[0]?.marks || 20} Marks)
+                      </span>
                     </div>
 
-                    <div className="space-y-4 text-xs text-slate-800 leading-relaxed">
-                      <div className="flex gap-3">
-                        <span className="font-bold font-mono">1.</span>
-                        <div className="flex-1">
-                          <p className="font-medium text-slate-900 mb-1">
-                            Define the fundamental axioms governing this domain and demonstrate their relevance to real-world computational or physical systems.
-                          </p>
-                          <div className="text-[11px] text-slate-500 font-mono">[4 Marks]</div>
+                    <div className="space-y-3.5 text-xs text-slate-800 leading-relaxed">
+                      {(activeViewingPaper.sections?.[0]?.questions || [
+                        { questionNumber: '1', text: 'Define the fundamental axioms governing this domain.', marks: 4 },
+                        { questionNumber: '2', text: 'Compare and contrast the primary theoretical frameworks.', marks: 4 },
+                        { questionNumber: '3', text: 'Explain the significance of boundary conditions.', marks: 6 },
+                        { questionNumber: '4', text: 'State the primary conservation laws applicable under steady-state.', marks: 6 },
+                      ]).map((q, idx) => (
+                        <div key={idx} className="flex gap-2.5">
+                          <span className="font-bold font-mono text-slate-900">Q{q.questionNumber}.</span>
+                          <div className="flex-1">
+                            <p className="font-medium text-slate-900 mb-1">{q.text}</p>
+                            {q.options && q.options.length > 0 && (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-[11px] text-slate-700 pl-1 mt-1 font-mono">
+                                {q.options.map((opt, oIdx) => (
+                                  <span key={oIdx}>{opt}</span>
+                                ))}
+                              </div>
+                            )}
+                            {q.marks && (
+                              <div className="text-[10px] text-slate-500 font-mono mt-0.5">[{q.marks} Marks]</div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-
-                      <div className="flex gap-3">
-                        <span className="font-bold font-mono">2.</span>
-                        <div className="flex-1">
-                          <p className="font-medium text-slate-900 mb-1">
-                            Compare and contrast the primary theoretical frameworks discussed in standard curricula. Cite two distinguishing empirical characteristics.
-                          </p>
-                          <div className="text-[11px] text-slate-500 font-mono">[4 Marks]</div>
-                        </div>
-                      </div>
-
-                      <div className="flex gap-3">
-                        <span className="font-bold font-mono">3.</span>
-                        <div className="flex-1">
-                          <p className="font-medium text-slate-900 mb-1">
-                            Explain the significance of boundary conditions and error tolerances in the formulation of mathematical models.
-                          </p>
-                          <div className="text-[11px] text-slate-500 font-mono">[6 Marks]</div>
-                        </div>
-                      </div>
-
-                      <div className="flex gap-3">
-                        <span className="font-bold font-mono">4.</span>
-                        <div className="flex-1">
-                          <p className="font-medium text-slate-900 mb-1">
-                            State the primary conservation laws or invariance properties applicable under steady-state operating regimes.
-                          </p>
-                          <div className="text-[11px] text-slate-500 font-mono">[6 Marks]</div>
-                        </div>
-                      </div>
+                      ))}
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Page 2 */}
+              {/* Page 2: Analytical & Problem Solving Sections */}
               {currentPage === 2 && (
                 <div>
-                  <div className="flex items-center justify-between text-[11px] font-mono text-slate-500 pb-4 border-b border-slate-200 mb-6">
-                    <span>{activeViewingPaper.title}</span>
+                  <div className="flex items-center justify-between text-[11px] font-mono text-slate-500 pb-3 border-b border-slate-200 mb-5">
+                    <span className="truncate max-w-[400px]">{activeViewingPaper.title}</span>
                     <span>Page 2 of 3</span>
                   </div>
 
                   <div className="space-y-6">
-                    <div className="flex items-center justify-between border-b border-slate-300 pb-1.5">
-                      <h3 className="font-bold text-sm tracking-wide text-slate-900">
-                        SECTION B — ANALYTICAL & METHODOLOGICAL PROBLEMS
-                      </h3>
-                      <span className="text-xs font-bold text-slate-600 font-mono">(40 Marks)</span>
-                    </div>
-
-                    <div className="space-y-5 text-xs text-slate-800 leading-relaxed">
-                      <div className="flex gap-3">
-                        <span className="font-bold font-mono">5.</span>
-                        <div className="flex-1">
-                          <p className="font-medium text-slate-900 mb-1.5">
-                            Derive the characteristic equation for the system described below. Validate dimensional consistency and evaluate asymptotic stability:
-                          </p>
-                          <div className="bg-slate-100 p-3 rounded font-mono text-xs my-2 text-slate-800 border border-slate-200">
-                            F(x, t) = &#x2202;&#178;&#968;/&#x2202;t&#178; - c&#178; &#x2207;&#178;&#968; + &#955; &#968;&#179; = 0
+                    {/* Render Section B & Section C */}
+                    {activeViewingPaper.sections && activeViewingPaper.sections.length > 1 ? (
+                      activeViewingPaper.sections.slice(1, 3).map((sec, secIdx) => (
+                        <div key={secIdx} className="space-y-4">
+                          <div className="flex items-center justify-between border-b border-slate-300 pb-1">
+                            <h3 className="font-bold text-xs tracking-wide text-slate-900 uppercase">
+                              {sec.title}
+                            </h3>
+                            <span className="text-xs font-bold text-slate-600 font-mono">
+                              ({sec.marks} Marks)
+                            </span>
                           </div>
-                          <p className="text-slate-600">
-                            (a) Determine the equilibrium points. (b) Linearize around the primary trajectory and plot the phase portrait.
-                          </p>
-                          <div className="text-[11px] text-slate-500 font-mono mt-1">[10 Marks]</div>
-                        </div>
-                      </div>
 
-                      <div className="flex gap-3">
-                        <span className="font-bold font-mono">6.</span>
-                        <div className="flex-1">
-                          <p className="font-medium text-slate-900 mb-1.5">
-                            A production facility operates under constrained resource parameters with variable throughput. Formulate the primal optimization problem:
-                          </p>
-                          <p className="text-slate-600">
-                            Apply the simplex method or Kuhn-Tucker conditions to compute optimal dual variables and conduct sensitivity analysis.
-                          </p>
-                          <div className="text-[11px] text-slate-500 font-mono mt-1">[10 Marks]</div>
+                          <div className="space-y-4 text-xs text-slate-800 leading-relaxed">
+                            {sec.questions.map((q, qIdx) => (
+                              <div key={qIdx} className="flex gap-2.5">
+                                <span className="font-bold font-mono text-slate-900">Q{q.questionNumber}.</span>
+                                <div className="flex-1">
+                                  <p className="font-medium text-slate-900 mb-1">{q.text}</p>
+                                  {q.options && q.options.length > 0 && (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-[11px] text-slate-700 pl-1 mt-1 font-mono">
+                                      {q.options.map((opt, oIdx) => (
+                                        <span key={oIdx}>{opt}</span>
+                                      ))}
+                                    </div>
+                                  )}
+                                  {q.marks && (
+                                    <div className="text-[10px] text-slate-500 font-mono mt-0.5">[{q.marks} Marks]</div>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-
-                      <div className="flex gap-3">
-                        <span className="font-bold font-mono">7.</span>
-                        <div className="flex-1">
-                          <p className="font-medium text-slate-900 mb-1.5">
-                            Critically evaluate modern empirical methodologies in contrast to classical closed-form analytic solutions.
-                          </p>
-                          <div className="text-[11px] text-slate-500 font-mono mt-1">[10 Marks]</div>
+                      ))
+                    ) : (
+                      <div className="space-y-5 text-xs text-slate-800 leading-relaxed">
+                        <div className="flex items-center justify-between border-b border-slate-300 pb-1.5">
+                          <h3 className="font-bold text-sm tracking-wide text-slate-900">
+                            SECTION B — ANALYTICAL & METHODOLOGICAL PROBLEMS
+                          </h3>
+                          <span className="text-xs font-bold text-slate-600 font-mono">(40 Marks)</span>
                         </div>
+                        <p className="text-slate-700">Q5. Derive governing mathematical formulas and evaluate equilibrium metrics. [15 Marks]</p>
+                        <p className="text-slate-700">Q6. Compare empirical data methodologies against classical analytic solutions. [15 Marks]</p>
+                        <p className="text-slate-700">Q7. Formulate optimization models under constrained resource parameters. [10 Marks]</p>
                       </div>
-                    </div>
+                    )}
                   </div>
                 </div>
               )}
 
-              {/* Page 3 */}
+              {/* Page 3: Official Answer Key & Step-by-Step Solutions */}
               {currentPage === 3 && (
                 <div>
-                  <div className="flex items-center justify-between text-[11px] font-mono text-slate-500 pb-4 border-b border-slate-200 mb-6">
-                    <span>{activeViewingPaper.title}</span>
-                    <span>Page 3 of 3</span>
+                  <div className="flex items-center justify-between text-[11px] font-mono text-slate-500 pb-3 border-b border-slate-200 mb-5">
+                    <span className="truncate max-w-[400px]">{activeViewingPaper.title}</span>
+                    <span>Page 3 of 3 (Answer Key)</span>
                   </div>
 
-                  <div className="space-y-6">
-                    <div className="flex items-center justify-between border-b border-slate-300 pb-1.5">
-                      <h3 className="font-bold text-sm tracking-wide text-slate-900">
-                        SECTION C — ADVANCED CASE STUDY & ESSAY
+                  <div className="space-y-5">
+                    <div className="flex items-center justify-between border-b border-slate-300 pb-1">
+                      <h3 className="font-bold text-xs tracking-wide text-slate-900 uppercase">
+                        SECTION D — OFFICIAL ANSWER KEY & STEP-BY-STEP SOLUTIONS
                       </h3>
-                      <span className="text-xs font-bold text-slate-600 font-mono">(40 Marks)</span>
+                      <span className="text-[11px] font-bold text-emerald-700 font-mono bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                        Verified Solutions
+                      </span>
                     </div>
 
-                    <div className="space-y-5 text-xs text-slate-800 leading-relaxed">
-                      <div className="flex gap-3">
-                        <span className="font-bold font-mono">8.</span>
-                        <div className="flex-1">
-                          <p className="font-bold text-slate-900 mb-1.5">
-                            CASE STUDY: Real-World Scenario & Scalability Assessment
-                          </p>
-                          <p className="text-slate-700 mb-2 leading-relaxed">
-                            Consider a modern enterprise deploying distributed architectures to process high-concurrency workloads. During peak traffic cycles, bottleneck latencies escalate exponentially while synchronization costs degrade throughput by 42%.
-                          </p>
-                          <p className="text-slate-600 mb-1">
-                            (a) Architect an end-to-end mitigation strategy with architectural diagrams.
-                          </p>
-                          <p className="text-slate-600 mb-1">
-                            (b) Calculate anticipated failover redundancy metrics and mean time between failures (MTBF).
-                          </p>
-                          <div className="text-[11px] text-slate-500 font-mono mt-1">[20 Marks]</div>
-                        </div>
-                      </div>
+                    <p className="text-[11px] text-slate-500 leading-relaxed">
+                      Below are the authentic answers, formulas, and marking breakdown for every question in this sample paper:
+                    </p>
 
-                      <div className="flex gap-3">
-                        <span className="font-bold font-mono">9.</span>
-                        <div className="flex-1">
-                          <p className="font-bold text-slate-900 mb-1.5">
-                            Future Horizons and Emerging Paradigms:
-                          </p>
-                          <p className="text-slate-600">
-                            Discuss the integration of artificial intelligence and machine intelligence frameworks within this discipline. Address both technical hurdles and ethical governance considerations.
-                          </p>
-                          <div className="text-[11px] text-slate-500 font-mono mt-1">[20 Marks]</div>
+                    <div className="space-y-3.5 text-xs text-slate-800 max-h-[640px] overflow-y-auto pr-2">
+                      {(
+                        activeViewingPaper.sections
+                          ?.flatMap((s) => s.questions.filter((q) => q.answerKey || q.explanation))
+                          .slice(0, 8) || []
+                      ).map((q, aIdx) => (
+                        <div key={aIdx} className="bg-slate-50 p-3 rounded border border-slate-200 space-y-1">
+                          <div className="flex items-center justify-between font-bold text-slate-900">
+                            <span className="font-mono">Question {q.questionNumber} Key:</span>
+                            <span className="text-emerald-700 font-mono bg-white px-2 py-0.5 rounded border border-slate-200">
+                              {q.answerKey}
+                            </span>
+                          </div>
+                          {q.explanation && (
+                            <p className="text-[11.5px] text-slate-600 leading-relaxed pt-1">
+                              <strong>Step-by-Step Method:</strong> {q.explanation}
+                            </p>
+                          )}
                         </div>
-                      </div>
+                      ))}
+
+                      {(!activeViewingPaper.sections || activeViewingPaper.sections.length === 0) && (
+                        <div className="bg-slate-50 p-4 rounded border border-slate-200 space-y-2 text-xs">
+                          <p className="font-bold text-slate-900">General Answer Key Rubric:</p>
+                          <p className="text-slate-600">Q1 to Q4: Core conceptual derivation and empirical justification.</p>
+                          <p className="text-slate-600">Q5 to Q7: Asymptotic convergence, boundary parameter checks, and equilibrium analysis.</p>
+                        </div>
+                      )}
                     </div>
 
-                    <div className="pt-10 text-center text-xs font-bold text-slate-400 uppercase tracking-widest">
-                      *** END OF QUESTION PAPER ***
+                    <div className="pt-6 text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest border-t border-slate-200">
+                      *** END OF QUESTION PAPER & ANSWER KEY ***
                     </div>
                   </div>
                 </div>

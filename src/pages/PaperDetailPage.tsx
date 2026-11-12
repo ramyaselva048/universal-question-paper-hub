@@ -72,7 +72,7 @@ export const PaperDetailPage: React.FC = () => {
       <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-6 sm:p-10 space-y-8">
         <div className="space-y-3">
           {/* Unboxed Metadata */}
-          <div className="flex items-center gap-2 text-xs text-slate-500">
+          <div className="flex items-center gap-2 text-xs text-slate-500 flex-wrap">
             <span className="text-electric-violet font-bold">
               {paper.category || 'General Examination'}
             </span>
@@ -82,6 +82,16 @@ export const PaperDetailPage: React.FC = () => {
                 <span className="font-mono tabular-nums text-slate-700">Year {paper.year}</span>
               </>
             )}
+            {paper.isDemo && (
+              <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200/90 px-2 py-0.5 rounded-md uppercase tracking-wider">
+                DEMO SAMPLE
+              </span>
+            )}
+            {paper.hasAnswerKey && (
+              <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/90 px-1.5 py-0.5 rounded-md">
+                Complete Answer Key
+              </span>
+            )}
             <span>·</span>
             <span>Uploaded {formatDate(paper.uploadedAt)}</span>
           </div>
@@ -90,8 +100,20 @@ export const PaperDetailPage: React.FC = () => {
             {paper.title}
           </h1>
 
+          {paper.isDemo && (
+            <div className="p-3 bg-amber-50 border border-amber-200/90 rounded-2xl text-xs text-amber-800 space-y-1">
+              <div className="font-bold flex items-center gap-1.5 uppercase tracking-wider text-[11px]">
+                <ShieldCheck className="w-4 h-4 text-amber-600" />
+                <span>Notice: Demo Practice Material</span>
+              </div>
+              <p className="text-amber-700 leading-relaxed">
+                This document is a realistic sample created for preparation, curriculum revision, and demonstration purposes. It is not an official examination paper issued by an examination board or government commission.
+              </p>
+            </div>
+          )}
+
           {paper.description && (
-            <p className="text-sm text-slate-600 leading-relaxed pt-2">
+            <p className="text-sm text-slate-600 leading-relaxed pt-1">
               {paper.description}
             </p>
           )}
@@ -130,6 +152,48 @@ export const PaperDetailPage: React.FC = () => {
             </span>
           </div>
         </div>
+
+        {/* Paper Question Structure Overview if sections exist */}
+        {paper.sections && paper.sections.length > 0 && (
+          <div className="space-y-4 pt-2 border-t border-slate-100">
+            <h3 className="text-sm font-bold text-deep-charcoal uppercase tracking-wider flex items-center justify-between">
+              <span>Exam Structure & Questions Summary</span>
+              <span className="text-xs text-electric-violet font-mono lowercase">
+                {paper.sections.length} sections · {paper.hasAnswerKey ? 'solutions included' : 'questions only'}
+              </span>
+            </h3>
+
+            <div className="space-y-3">
+              {paper.sections.map((sec, sIdx) => (
+                <div key={sIdx} className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4 text-xs space-y-2">
+                  <div className="flex items-center justify-between font-bold text-slate-800">
+                    <span>{sec.title}</span>
+                    <span className="font-mono text-slate-500">({sec.marks} Marks)</span>
+                  </div>
+                  <div className="space-y-2 text-slate-600 pl-2">
+                    {sec.questions.slice(0, 3).map((q, qIdx) => (
+                      <div key={qIdx} className="border-l-2 border-electric-violet/30 pl-2.5 py-0.5">
+                        <p className="font-medium text-slate-800">
+                          Q{q.questionNumber}. {q.text}
+                        </p>
+                        {q.answerKey && (
+                          <p className="text-[11px] text-emerald-700 font-mono mt-0.5">
+                            Answer Key: {q.answerKey}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                    {sec.questions.length > 3 && (
+                      <p className="text-[11px] text-slate-400 italic">
+                        + {sec.questions.length - 3} more questions in PDF
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Primary Interactive CTAs */}
         <div className="flex flex-wrap items-center gap-3 pt-4 border-t border-slate-100">

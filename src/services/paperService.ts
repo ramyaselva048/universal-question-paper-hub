@@ -1,47 +1,18 @@
 import { QuestionPaper, Category, FilterOptions, DownloadRecord, ViewRecord } from '../types';
-import { generateMinimalExamPdfBlob } from '../utils/pdfGenerator';
+import { generateQuestionPaperPdfBlob } from '../utils/pdfGenerator';
+import { DEMO_PAPERS, DEMO_CATEGORIES } from '../data/samplePapers';
 
 const PAPERS_STORAGE_KEY = 'uqph_papers_data_v2';
 const CATEGORIES_STORAGE_KEY = 'uqph_categories_data_v2';
 const FAVORITES_STORAGE_KEY = 'uqph_favorites_data_v2';
 const DOWNLOADS_STORAGE_KEY = 'uqph_downloads_data_v2';
 const VIEWS_STORAGE_KEY = 'uqph_views_data_v2';
-const CLEANUP_SENTINEL_KEY = 'uqph_initial_clean_slate_executed_v1';
+const HIDDEN_DEMO_PAPERS_KEY = 'uqph_hidden_demo_ids_v1';
+const DEMO_PAPER_OVERRIDES_KEY = 'uqph_demo_paper_overrides_v1';
+const DEMO_METRICS_STORAGE_KEY = 'uqph_demo_metrics_v2';
 
-// One-time cleanup: Remove old demo data, dummy records, and temporary uploads once.
-// Never deletes newly entered data on subsequent reloads or application restarts.
-function performOneTimeCleanup(): void {
-  try {
-    if (typeof window !== 'undefined') {
-      const alreadyCleaned = localStorage.getItem(CLEANUP_SENTINEL_KEY);
-      if (!alreadyCleaned) {
-        // Clear all previous sample and demo storage keys
-        localStorage.removeItem('uqph_papers_data_v1');
-        localStorage.removeItem('uqph_categories_data_v1');
-        localStorage.removeItem('uqph_favorites_data_v1');
-        localStorage.removeItem('uqph_downloads_data_v1');
-        localStorage.removeItem('uqph_views_data_v1');
-
-        // Initialize fresh empty arrays for newly entered data
-        localStorage.setItem(PAPERS_STORAGE_KEY, JSON.stringify([]));
-        localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify([]));
-        localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify([]));
-        localStorage.setItem(DOWNLOADS_STORAGE_KEY, JSON.stringify([]));
-        localStorage.setItem(VIEWS_STORAGE_KEY, JSON.stringify([]));
-
-        // Mark cleanup as completed so this never executes again
-        localStorage.setItem(CLEANUP_SENTINEL_KEY, 'true');
-      }
-    }
-  } catch (err) {
-    console.warn('One-time data cleanup notice:', err);
-  }
-}
-
-// Execute one-time cleanup on initialization
-performOneTimeCleanup();
-
-function initializePapers(): QuestionPaper[] {
+// Retrieve user uploaded papers from local storage
+function getStoredUserPapers(): QuestionPaper[] {
   try {
     const raw = localStorage.getItem(PAPERS_STORAGE_KEY);
     if (raw !== null) {
@@ -53,12 +24,58 @@ function initializePapers(): QuestionPaper[] {
   } catch {
     // fallback
   }
-
-  // Pure empty array - no automatic dummy data generation
   return [];
 }
 
-function initializeCategories(): Category[] {
+// Retrieve hidden demo paper IDs (if admin deleted any demo paper)
+function getHiddenDemoPaperIds(): string[] {
+  try {
+    const raw = localStorage.getItem(HIDDEN_DEMO_PAPERS_KEY);
+    if (raw) {
+      return JSON.parse(raw);
+    }
+  } catch {
+    // ignore
+  }
+  return [];
+}
+
+// Retrieve demo paper updates made by admin
+function getDemoPaperOverrides(): Record<string, Partial<QuestionPaper>> {
+  try {
+    const raw = localStorage.getItem(DEMO_PAPER_OVERRIDES_KEY);
+    if (raw) {
+      return JSON.parse(raw);
+    }
+  } catch {
+    // ignore
+  }
+  return {};
+}
+
+// Retrieve live view/download counters for demo papers
+function getDemoMetrics(): Record<string, { downloads?: number; views?: number }> {
+  try {
+    const raw = localStorage.getItem(DEMO_METRICS_STORAGE_KEY);
+    if (raw) {
+      return JSON.parse(raw);
+    }
+  } catch {
+    // ignore
+  }
+  return {};
+}
+
+function saveDemoMetrics(metrics: Record<string, { downloads?: number; views?: number }>): void {
+  try {
+    localStorage.setItem(DEMO_METRICS_STORAGE_KEY, JSON.stringify(metrics));
+  } catch {
+    // ignore
+  }
+}
+
+// Retrieve user-created categories
+function getStoredUserCategories(): Category[] {
   try {
     const raw = localStorage.getItem(CATEGORIES_STORAGE_KEY);
     if (raw !== null) {
@@ -70,18 +87,35 @@ function initializeCategories(): Category[] {
   } catch {
     // fallback
   }
-
-  // Pure empty array - no automatic dummy data generation
   return [];
 }
 
 export const paperService = {
   // -------------------------------------------------------------
-  // PAPERS CRUD
+  // PAPERS CRUD (Combines User Uploads + 12 Separate Demo Papers)
   // -------------------------------------------------------------
 
   getPapers(): QuestionPaper[] {
-    return initializePapers();
+    const userUploadedPapers = getStoredUserPapers();
+    const hiddenDemoIds = getHiddenDemoPaperIds();
+    const demoOverrides = getDemoPaperOverrides();
+    const demoMetrics = getDemoMetrics();
+
+    // Process the 12 demo papers: apply admin edits and live interaction metrics
+    const activeDemoPapers = DEMO_PAPERS.filter((dp) => !hiddenDemoIds.includes(dp.id)).map((dp) => {
+      const override = demoOverrides[dp.id] || {};
+      const metric = demoMetrics[dp.id] || {};
+
+      return {
+        ...dp,
+        ...override,
+        downloadCount: metric.downloads !== undefined ? metric.downloads : dp.downloadCount,
+        viewCount: metric.views !== undefined ? metric.views : dp.viewCount,
+      };
+    });
+
+    // Real uploaded papers take precedence, followed by the separate demo papers
+    return [...userUploadedPapers, ...activeDemoPapers];
   },
 
   getPaperById(id: string): QuestionPaper | undefined {
@@ -99,7 +133,7 @@ export const paperService = {
     fileBlob?: Blob;
     fileDataUrl?: string;
   }): QuestionPaper {
-    const papers = this.getPapers();
+    const userPapers = getStoredUserPapers();
     const newId = 'qp-' + Date.now().toString(36) + Math.random().toString(36).substring(2, 5);
 
     const newPaper: QuestionPaper = {
@@ -116,9 +150,11 @@ export const paperService = {
       uploadedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       uploadedBy: 'admin',
+      isDemo: false,
     };
 
-    const updated = [newPaper, ...papers];
+    // Stored separately in PAPERS_STORAGE_KEY for user uploads
+    const updated = [newPaper, ...userPapers];
     localStorage.setItem(PAPERS_STORAGE_KEY, JSON.stringify(updated));
     return newPaper;
   },
@@ -130,87 +166,148 @@ export const paperService = {
       fileDataUrl?: string;
     }
   ): QuestionPaper | null {
-    const papers = this.getPapers();
-    const index = papers.findIndex((p) => p.id === id);
-    if (index === -1) return null;
+    // 1. Check if it is a user uploaded paper
+    const userPapers = getStoredUserPapers();
+    const userIndex = userPapers.findIndex((p) => p.id === id);
 
-    const current = papers[index];
-    const updatedPaper: QuestionPaper = {
-      ...current,
-      ...updates,
-      title: updates.title !== undefined ? updates.title.trim() : current.title,
-      category: updates.category !== undefined ? updates.category.trim() || undefined : current.category,
-      year: updates.year !== undefined ? updates.year : current.year,
-      description: updates.description !== undefined ? updates.description.trim() || undefined : current.description,
-      fileUrl: updates.fileDataUrl !== undefined ? updates.fileDataUrl : current.fileUrl,
-      updatedAt: new Date().toISOString(),
-    };
+    if (userIndex !== -1) {
+      const current = userPapers[userIndex];
+      const updatedPaper: QuestionPaper = {
+        ...current,
+        ...updates,
+        title: updates.title !== undefined ? updates.title.trim() : current.title,
+        category: updates.category !== undefined ? updates.category.trim() || undefined : current.category,
+        year: updates.year !== undefined ? updates.year : current.year,
+        description: updates.description !== undefined ? updates.description.trim() || undefined : current.description,
+        fileUrl: updates.fileDataUrl !== undefined ? updates.fileDataUrl : current.fileUrl,
+        updatedAt: new Date().toISOString(),
+      };
 
-    papers[index] = updatedPaper;
-    localStorage.setItem(PAPERS_STORAGE_KEY, JSON.stringify(papers));
-    return updatedPaper;
+      userPapers[userIndex] = updatedPaper;
+      localStorage.setItem(PAPERS_STORAGE_KEY, JSON.stringify(userPapers));
+      return updatedPaper;
+    }
+
+    // 2. Check if it is a demo paper
+    const isDemo = DEMO_PAPERS.some((dp) => dp.id === id);
+    if (isDemo) {
+      const overrides = getDemoPaperOverrides();
+      overrides[id] = {
+        ...(overrides[id] || {}),
+        ...updates,
+        title: updates.title !== undefined ? updates.title.trim() : undefined,
+        category: updates.category !== undefined ? updates.category.trim() || undefined : undefined,
+        year: updates.year !== undefined ? updates.year : undefined,
+        description: updates.description !== undefined ? updates.description.trim() || undefined : undefined,
+        updatedAt: new Date().toISOString(),
+      };
+      localStorage.setItem(DEMO_PAPER_OVERRIDES_KEY, JSON.stringify(overrides));
+      return this.getPaperById(id) || null;
+    }
+
+    return null;
   },
 
   deletePaper(id: string): boolean {
-    const papers = this.getPapers();
-    const filtered = papers.filter((p) => p.id !== id);
-    if (filtered.length === papers.length) return false;
-    localStorage.setItem(PAPERS_STORAGE_KEY, JSON.stringify(filtered));
-    return true;
+    // 1. Check user uploaded papers
+    const userPapers = getStoredUserPapers();
+    const filteredUserPapers = userPapers.filter((p) => p.id !== id);
+
+    if (filteredUserPapers.length !== userPapers.length) {
+      localStorage.setItem(PAPERS_STORAGE_KEY, JSON.stringify(filteredUserPapers));
+      return true;
+    }
+
+    // 2. Check if it is a demo paper
+    const isDemo = DEMO_PAPERS.some((dp) => dp.id === id);
+    if (isDemo) {
+      const hiddenIds = getHiddenDemoPaperIds();
+      if (!hiddenIds.includes(id)) {
+        hiddenIds.push(id);
+        localStorage.setItem(HIDDEN_DEMO_PAPERS_KEY, JSON.stringify(hiddenIds));
+      }
+      return true;
+    }
+
+    return false;
   },
 
   // -------------------------------------------------------------
-  // CATEGORIES CRUD
+  // CATEGORIES CRUD (Combines User Created + 5 Demo Categories)
   // -------------------------------------------------------------
 
   getCategories(): Category[] {
-    return initializeCategories();
+    const userCategories = getStoredUserCategories();
+    const categoryMap = new Map<string, Category>();
+
+    // Add demo categories first
+    DEMO_CATEGORIES.forEach((cat) => {
+      categoryMap.set(cat.name.toLowerCase(), cat);
+    });
+
+    // Add user categories (can override or add new)
+    userCategories.forEach((cat) => {
+      categoryMap.set(cat.name.toLowerCase(), cat);
+    });
+
+    return Array.from(categoryMap.values());
   },
 
   createCategory(name: string, description?: string): Category {
-    const categories = this.getCategories();
+    const userCategories = getStoredUserCategories();
     const newCategory: Category = {
       id: 'cat-' + Date.now().toString(36),
       name: name.trim(),
       description: description?.trim() || undefined,
       createdAt: new Date().toISOString(),
     };
-    const updated = [...categories, newCategory];
+    const updated = [...userCategories, newCategory];
     localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(updated));
     return newCategory;
   },
 
   updateCategory(id: string, name: string, description?: string): Category | null {
-    const categories = this.getCategories();
-    const index = categories.findIndex((c) => c.id === id);
-    if (index === -1) return null;
+    const userCategories = getStoredUserCategories();
+    const index = userCategories.findIndex((c) => c.id === id);
 
-    const oldName = categories[index].name;
-    const newName = name.trim();
-
-    categories[index] = {
-      ...categories[index],
-      name: newName,
-      description: description !== undefined ? description.trim() : categories[index].description,
-    };
-    localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(categories));
-
-    // Also update any papers assigned to this category name
-    if (oldName !== newName) {
-      const papers = this.getPapers();
-      const updatedPapers = papers.map((p) => (p.category === oldName ? { ...p, category: newName } : p));
-      localStorage.setItem(PAPERS_STORAGE_KEY, JSON.stringify(updatedPapers));
+    if (index === -1) {
+      // Check if trying to edit a demo category - clone it to user categories
+      const demoCat = DEMO_CATEGORIES.find((c) => c.id === id);
+      if (demoCat) {
+        const cloned: Category = {
+          ...demoCat,
+          name: name.trim(),
+          description: description !== undefined ? description.trim() : demoCat.description,
+        };
+        localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify([...userCategories, cloned]));
+        return cloned;
+      }
+      return null;
     }
 
-    return categories[index];
+    const oldName = userCategories[index].name;
+    const newName = name.trim();
+
+    userCategories[index] = {
+      ...userCategories[index],
+      name: newName,
+      description: description !== undefined ? description.trim() : userCategories[index].description,
+    };
+    localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(userCategories));
+
+    // Also update any user papers assigned to oldName
+    if (oldName !== newName) {
+      const userPapers = getStoredUserPapers();
+      const updatedUserPapers = userPapers.map((p) => (p.category === oldName ? { ...p, category: newName } : p));
+      localStorage.setItem(PAPERS_STORAGE_KEY, JSON.stringify(updatedUserPapers));
+    }
+
+    return userCategories[index];
   },
 
   deleteCategory(id: string): boolean {
-    const categories = this.getCategories();
-    const target = categories.find((c) => c.id === id);
-    if (!target) return false;
-
-    const filtered = categories.filter((c) => c.id !== id);
+    const userCategories = getStoredUserCategories();
+    const filtered = userCategories.filter((c) => c.id !== id);
     localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(filtered));
     return true;
   },
@@ -230,14 +327,28 @@ export const paperService = {
   // -------------------------------------------------------------
 
   recordDownload(paperId: string): void {
-    const papers = this.getPapers();
-    const paper = papers.find((p) => p.id === paperId);
-    if (!paper) return;
+    const userPapers = getStoredUserPapers();
+    const userPaper = userPapers.find((p) => p.id === paperId);
 
-    paper.downloadCount = (paper.downloadCount || 0) + 1;
-    localStorage.setItem(PAPERS_STORAGE_KEY, JSON.stringify(papers));
+    if (userPaper) {
+      userPaper.downloadCount = (userPaper.downloadCount || 0) + 1;
+      localStorage.setItem(PAPERS_STORAGE_KEY, JSON.stringify(userPapers));
+    } else {
+      // It's a demo paper
+      const demoMetrics = getDemoMetrics();
+      const current = demoMetrics[paperId] || {};
+      demoMetrics[paperId] = {
+        ...current,
+        downloads: (current.downloads !== undefined ? current.downloads : 0) + 1,
+      };
+      saveDemoMetrics(demoMetrics);
+    }
 
     // Store in user download log
+    const allPapers = this.getPapers();
+    const paper = allPapers.find((p) => p.id === paperId);
+    if (!paper) return;
+
     try {
       const raw = localStorage.getItem(DOWNLOADS_STORAGE_KEY);
       const downloads: DownloadRecord[] = raw ? JSON.parse(raw) : [];
@@ -250,7 +361,6 @@ export const paperService = {
         downloadedAt: new Date().toISOString(),
         fileSize: paper.fileSize,
       };
-      // Keep recent 100
       const updatedDownloads = [newRecord, ...downloads].slice(0, 100);
       localStorage.setItem(DOWNLOADS_STORAGE_KEY, JSON.stringify(updatedDownloads));
     } catch {
@@ -259,14 +369,28 @@ export const paperService = {
   },
 
   recordView(paperId: string): void {
-    const papers = this.getPapers();
-    const paper = papers.find((p) => p.id === paperId);
-    if (!paper) return;
+    const userPapers = getStoredUserPapers();
+    const userPaper = userPapers.find((p) => p.id === paperId);
 
-    paper.viewCount = (paper.viewCount || 0) + 1;
-    localStorage.setItem(PAPERS_STORAGE_KEY, JSON.stringify(papers));
+    if (userPaper) {
+      userPaper.viewCount = (userPaper.viewCount || 0) + 1;
+      localStorage.setItem(PAPERS_STORAGE_KEY, JSON.stringify(userPapers));
+    } else {
+      // It's a demo paper
+      const demoMetrics = getDemoMetrics();
+      const current = demoMetrics[paperId] || {};
+      demoMetrics[paperId] = {
+        ...current,
+        views: (current.views !== undefined ? current.views : 0) + 1,
+      };
+      saveDemoMetrics(demoMetrics);
+    }
 
     // Store in user viewed history
+    const allPapers = this.getPapers();
+    const paper = allPapers.find((p) => p.id === paperId);
+    if (!paper) return;
+
     try {
       const raw = localStorage.getItem(VIEWS_STORAGE_KEY);
       const views: ViewRecord[] = raw ? JSON.parse(raw) : [];
@@ -339,7 +463,7 @@ export const paperService = {
   filterPapers(options: FilterOptions): QuestionPaper[] {
     let list = this.getPapers();
 
-    // Search query filter (title or category or description)
+    // Search query filter (title, category, description, or tags)
     if (options.searchQuery && options.searchQuery.trim()) {
       const q = options.searchQuery.toLowerCase().trim();
       list = list.filter(
@@ -399,13 +523,12 @@ export const paperService = {
     return Array.from(set).sort((a, b) => Number(b) - Number(a));
   },
 
-  // Generates real PDF blob and triggers browser download
+  // Generates genuine multi-page PDF blob with answer keys and triggers browser download
   downloadPaperFile(paper: QuestionPaper): void {
     this.recordDownload(paper.id);
     let blob: Blob;
 
     if (paper.fileUrl && paper.fileUrl.startsWith('data:')) {
-      // Decode data url to blob
       const arr = paper.fileUrl.split(',');
       const mime = arr[0].match(/:(.*?);/)?.[1] || 'application/pdf';
       const bstr = atob(arr[1]);
@@ -416,7 +539,7 @@ export const paperService = {
       }
       blob = new Blob([u8arr], { type: mime });
     } else {
-      blob = generateMinimalExamPdfBlob(paper.title, paper.category || 'General', paper.year || '2024');
+      blob = generateQuestionPaperPdfBlob(paper);
     }
 
     const url = URL.createObjectURL(blob);
@@ -426,6 +549,6 @@ export const paperService = {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    setTimeout(() => URL.revokeObjectURL(url), 3000);
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
   },
 };

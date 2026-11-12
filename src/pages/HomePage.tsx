@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { usePapers } from '../context/PaperContext';
 import { useAuth } from '../context/AuthContext';
 import { QuestionPaperCard } from '../components/QuestionPaperCard';
-import { GoogleSignInButton } from '../components/GoogleSignInButton';
 import {
   Search,
   ArrowRight,
@@ -112,14 +111,6 @@ export const HomePage: React.FC = () => {
                   </div>
                 </div>
               </form>
-
-              {/* Google Sign-in prompt for guest visitors */}
-              {!user && (
-                <div className="pt-2 flex flex-col sm:flex-row sm:items-center gap-4 text-xs text-slate-500">
-                  <span>Sign in with Google to bookmark favourites and track your download history:</span>
-                  <GoogleSignInButton variant="compact" />
-                </div>
-              )}
             </div>
 
             {/* Right Visual Image */}
@@ -156,7 +147,7 @@ export const HomePage: React.FC = () => {
             </div>
             <div>
               <div className="text-2xl sm:text-3xl font-black text-deep-charcoal font-mono tabular-nums">
-                {totalPapers > 0 ? `${totalPapers.toLocaleString()}+` : '0'}
+                {totalPapers.toLocaleString()}
               </div>
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                 Total Question Papers

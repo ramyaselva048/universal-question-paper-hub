@@ -1,3 +1,19 @@
+export interface ExamQuestion {
+  questionNumber: string | number;
+  text: string;
+  marks?: number;
+  options?: string[];
+  answerKey?: string;
+  explanation?: string;
+}
+
+export interface ExamSection {
+  title: string;
+  description?: string;
+  marks: number;
+  questions: ExamQuestion[];
+}
+
 export interface QuestionPaper {
   id: string;
   title: string;
@@ -13,6 +29,12 @@ export interface QuestionPaper {
   updatedAt: string;
   uploadedBy?: string;
   tags?: string[];
+  isDemo?: boolean;
+  hasAnswerKey?: boolean;
+  timeAllowed?: string;
+  maxMarks?: number;
+  generalInstructions?: string[];
+  sections?: ExamSection[];
 }
 
 export interface Category {

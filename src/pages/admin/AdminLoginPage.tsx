@@ -163,9 +163,9 @@ export const AdminLoginPage: React.FC = () => {
           </div>
 
           <p className="text-[11px] text-slate-500">
-            Public users must sign in via{' '}
+            Looking to browse or download examination papers?{' '}
             <Link to="/" className="text-electric-violet hover:underline font-semibold">
-              Google Sign-In on the Homepage
+              Visit the Homepage
             </Link>
             .
           </p>

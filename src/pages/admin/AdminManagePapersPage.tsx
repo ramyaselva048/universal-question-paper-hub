@@ -228,9 +228,16 @@ export const AdminManagePapersPage: React.FC = () => {
                 paginated.map((paper) => (
                   <tr key={paper.id} className="hover:bg-slate-800/30 transition-colors">
                     <td className="py-4 px-4 max-w-xs">
-                      <p className="font-bold text-white leading-snug line-clamp-1" title={paper.title}>
-                        {paper.title}
-                      </p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="font-bold text-white leading-snug line-clamp-1" title={paper.title}>
+                          {paper.title}
+                        </p>
+                        {paper.isDemo && (
+                          <span className="text-[9px] font-bold text-amber-300 bg-amber-500/20 px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0 border border-amber-500/30">
+                            DEMO
+                          </span>
+                        )}
+                      </div>
                       <p className="text-[11px] text-slate-500 font-mono mt-0.5 truncate">
                         {paper.fileName}
                       </p>

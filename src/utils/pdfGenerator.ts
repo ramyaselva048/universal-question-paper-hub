@@ -1,5 +1,7 @@
+import { QuestionPaper, ExamSection } from '../types';
+
 /**
- * Utility for formatting and creating realistic question paper PDF representations.
+ * Utility for formatting and creating authentic question paper PDF representations.
  */
 
 export function formatFileSize(bytes: number): string {
@@ -24,124 +26,297 @@ export function formatDate(isoDateString: string): string {
 }
 
 /**
- * Creates an authentic PDF document for a question paper title
- * Using standard minimal PDF 1.4 binary structure so it opens properly in all PDF viewers and download tools.
+ * Escapes characters for PDF literal strings enclosed in parentheses
  */
-export function generateMinimalExamPdfBlob(title: string, category: string = 'General', year: string | number = '2024'): Blob {
-  // Construct a minimal valid PDF format document with exam content
-  const content = `
-%PDF-1.4
-1 0 obj
-<<
-  /Type /Catalog
-  /Pages 2 0 R
->>
-endobj
-2 0 obj
-<<
-  /Type /Pages
-  /Kids [3 0 R]
-  /Count 1
->>
-endobj
-3 0 obj
-<<
-  /Type /Page
-  /Parent 2 0 R
-  /MediaBox [0 0 595 842]
-  /Contents 4 0 R
-  /Resources <<
-    /Font <<
-      /F1 <<
-        /Type /Font
-        /Subtype /Type1
-        /BaseFont /Helvetica-Bold
-      >>
-      /F2 <<
-        /Type /Font
-        /Subtype /Type1
-        /BaseFont /Helvetica
-      >>
-    >>
-  >>
->>
-endobj
-4 0 obj
-<<
-  /Length 550
->>
-stream
-BT
-/F1 18 Tf
-50 780 Td
-(UNIVERSAL QUESTION PAPER HUB) Tj
-/F1 14 Tf
-0 -30 Td
-(${title.replace(/[\(\)]/g, '')}) Tj
-/F2 11 Tf
-0 -22 Td
-(Category: ${category}   |   Examination Year: ${year}   |   Max Marks: 100) Tj
-0 -15 Td
-(Time Allowed: 3 Hours   |   Universal Reference ID: UQPH-${Math.floor(100000 + Math.random() * 900000)}) Tj
-0 -25 Td
-(--------------------------------------------------------------------------------------------------------------------------------) Tj
-/F1 12 Tf
-0 -25 Td
-(INSTRUCTIONS TO CANDIDATES:) Tj
-/F2 10 Tf
-0 -16 Td
-(1. Answer all questions from Section A and any four questions from Section B.) Tj
-0 -14 Td
-(2. Figures to the right indicate full marks assigned to each question.) Tj
-0 -14 Td
-(3. Use of non-programmable scientific calculators is permitted where stated.) Tj
-/F1 12 Tf
-0 -28 Td
-(SECTION A - OBJECTIVE & CORE CONCEPTS [20 MARKS]) Tj
-/F2 10 Tf
-0 -18 Td
-(Q1. Define the fundamental principles governing this subject area.) Tj
-0 -16 Td
-(Q2. State the primary assumptions and boundary conditions required for theoretical analysis.) Tj
-0 -16 Td
-(Q3. Provide two distinct real-world applications with explanatory diagrams.) Tj
-/F1 12 Tf
-0 -28 Td
-(SECTION B - ADVANCED ANALYTICAL PROBLEMS [40 MARKS]) Tj
-/F2 10 Tf
-0 -18 Td
-(Q4. Derive the governing differential equation and verify dimensional consistency.) Tj
-0 -16 Td
-(Q5. Evaluate the efficiency metrics under varying environmental load conditions.) Tj
-0 -16 Td
-(Q6. Formulate a comprehensive synthesis comparing modern and classical frameworks.) Tj
-/F1 10 Tf
-0 -50 Td
-(Official Archive Copy - Universal Question Paper Hub Repository) Tj
-ET
-endstream
-endobj
-xref
-0 5
-0000000000 65535 f 
-0000000009 00000 n 
-0000000058 00000 n 
-0000000115 00000 n 
-0000000378 00000 n 
-trailer
-<<
-  /Size 5
-  /Root 1 0 R
->>
-startxref
-980
-%%EOF
-  `.trim();
-
-  return new Blob([content], { type: 'application/pdf' });
+function escapePdf(text: string): string {
+  return text
+    .replace(/\\/g, '\\\\')
+    .replace(/\(/g, '\\(')
+    .replace(/\)/g, '\\)')
+    .replace(/[\r\n\t]/g, ' ')
+    // Replace non-ASCII characters with standard ASCII equivalents for Type 1 standard fonts
+    .replace(/[—–]/g, '-')
+    .replace(/[“”]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .replace(/·/g, '*')
+    .replace(/[²]/g, '^2')
+    .replace(/[³]/g, '^3')
+    .replace(/[√]/g, 'sqrt')
+    .replace(/[π]/g, 'pi')
+    .replace(/[θ]/g, 'theta')
+    .replace(/[μ]/g, 'u')
+    .replace(/[ε]/g, 'e')
+    .replace(/[λ]/g, 'lambda')
+    .replace(/[Σ]/g, 'SUM')
+    .replace(/[∫]/g, 'INT')
+    .replace(/[≠]/g, '!=')
+    .replace(/[≤]/g, '<=')
+    .replace(/[≥]/g, '>=')
+    .replace(/[±]/g, '+/-')
+    .replace(/[°]/g, ' deg');
 }
 
-export function createDownloadUrlForPaper(title: string, category?: string, year?: string | number): string {
-  const blob = generateMinimalExamPdfBlob(title, category || 'General', year || '2024');
+/**
+ * Wraps long text lines to fit within a given character width
+ */
+function wrapText(text: string, maxCharsPerLine: number = 76): string[] {
+  const words = text.split(' ');
+  const lines: string[] = [];
+  let currentLine = '';
+
+  for (const word of words) {
+    if (!currentLine) {
+      currentLine = word;
+    } else if ((currentLine + ' ' + word).length <= maxCharsPerLine) {
+      currentLine += ' ' + word;
+    } else {
+      lines.push(currentLine);
+      currentLine = word;
+    }
+  }
+  if (currentLine) {
+    lines.push(currentLine);
+  }
+  return lines.length > 0 ? lines : [''];
+}
+
+/**
+ * Generates an authentic, valid PDF 1.4 multi-page document with real questions and answer keys.
+ * Clearly watermarked and labeled as DEMO SAMPLE PAPER - NOT AN OFFICIAL EXAMINATION PAPER.
+ */
+export function generateQuestionPaperPdfBlob(paper: Partial<QuestionPaper>): Blob {
+  const title = paper.title || 'Universal Examination Question Paper';
+  const category = paper.category || 'General';
+  const year = paper.year || '2024';
+  const timeAllowed = paper.timeAllowed || '3 Hours';
+  const maxMarks = paper.maxMarks || 100;
+  const paperCode = `UQPH-${(paper.id || 'DEMO').replace(/[^a-zA-Z0-9]/g, '').slice(-8).toUpperCase()}`;
+
+  // Content for Page 1: Header, Demo Disclaimers, Instructions, Section A
+  const page1Lines: Array<{ font: 'F1' | 'F2'; size: number; text: string; dy: number }> = [
+    { font: 'F1', size: 15, text: 'UNIVERSAL QUESTION PAPER HUB', dy: 0 },
+    { font: 'F1', size: 9, text: '*** DEMO SAMPLE QUESTION PAPER - FOR PRACTICE & STUDY PURPOSES ONLY ***', dy: -18 },
+    { font: 'F2', size: 8, text: 'NOTICE: THIS IS A SIMULATED DEMO DOCUMENT. NOT AN OFFICIAL EXAMINATION PAPER.', dy: -13 },
+    { font: 'F1', size: 12, text: title.toUpperCase(), dy: -22 },
+    { font: 'F2', size: 9, text: `Discipline: ${category}   |   Examination Year: ${year}   |   Max Marks: ${maxMarks}`, dy: -16 },
+    { font: 'F2', size: 8.5, text: `Time Allowed: ${timeAllowed}   |   Paper Code: ${paperCode}`, dy: -13 },
+    { font: 'F2', size: 8, text: '----------------------------------------------------------------------------------------------------------------------------', dy: -12 },
+    { font: 'F1', size: 9.5, text: 'GENERAL INSTRUCTIONS TO CANDIDATES:', dy: -16 },
+  ];
+
+  const instructions = paper.generalInstructions && paper.generalInstructions.length > 0
+    ? paper.generalInstructions
+    : [
+        '1. This question paper is a verified DEMO SAMPLE for academic practice and preparation.',
+        '2. Candidate must verify all sections and report any printing discrepancy immediately.',
+        '3. Answer all questions from Section A. Attempt optional questions as instructed in Section B and C.',
+        '4. Detailed Answer Keys and explanatory solutions are appended at the end of this paper.',
+      ];
+
+  instructions.forEach((inst, idx) => {
+    const wrapped = wrapText(inst.startsWith(`${idx + 1}.`) ? inst : `${idx + 1}. ${inst}`, 80);
+    wrapped.forEach((wLine, lineIdx) => {
+      page1Lines.push({
+        font: 'F2',
+        size: 8.5,
+        text: wLine,
+        dy: lineIdx === 0 ? -12 : -10,
+      });
+    });
+  });
+
+  page1Lines.push({ font: 'F2', size: 8, text: '----------------------------------------------------------------------------------------------------------------------------', dy: -14 });
+
+  // First Section
+  const sec1 = paper.sections && paper.sections.length > 0 ? paper.sections[0] : null;
+  if (sec1) {
+    page1Lines.push({ font: 'F1', size: 10, text: sec1.title, dy: -16 });
+    sec1.questions.forEach((q) => {
+      const qPrefix = `Q${q.questionNumber}. `;
+      const wrappedQ = wrapText(qPrefix + q.text, 78);
+      wrappedQ.forEach((wLine, wIdx) => {
+        page1Lines.push({
+          font: 'F2',
+          size: 8.5,
+          text: wLine,
+          dy: wIdx === 0 ? -13 : -10,
+        });
+      });
+      if (q.options && q.options.length > 0) {
+        q.options.forEach((opt) => {
+          page1Lines.push({ font: 'F2', size: 8, text: `   ${opt}`, dy: -10 });
+        });
+      }
+    });
+  }
+
+  // Content for Page 2: Sections B & C (Analytical & Numerical Questions)
+  const page2Lines: Array<{ font: 'F1' | 'F2'; size: number; text: string; dy: number }> = [
+    { font: 'F1', size: 9, text: `${title} - Page 2`, dy: 0 },
+    { font: 'F2', size: 7.5, text: '*** DEMO PRACTICE PAPER - NOT AN OFFICIAL EXAMINATION PAPER ***', dy: -12 },
+    { font: 'F2', size: 8, text: '----------------------------------------------------------------------------------------------------------------------------', dy: -10 },
+  ];
+
+  const otherSections = paper.sections && paper.sections.length > 1 ? paper.sections.slice(1) : [];
+  if (otherSections.length > 0) {
+    otherSections.forEach((sec) => {
+      page2Lines.push({ font: 'F1', size: 10, text: sec.title, dy: -16 });
+      sec.questions.forEach((q) => {
+        const qPrefix = `Q${q.questionNumber}. `;
+        const wrappedQ = wrapText(qPrefix + q.text + (q.marks ? ` [${q.marks} Marks]` : ''), 78);
+        wrappedQ.forEach((wLine, wIdx) => {
+          page2Lines.push({
+            font: 'F2',
+            size: 8.5,
+            text: wLine,
+            dy: wIdx === 0 ? -13 : -10,
+          });
+        });
+        if (q.options && q.options.length > 0) {
+          q.options.forEach((opt) => {
+            page2Lines.push({ font: 'F2', size: 8, text: `   ${opt}`, dy: -10 });
+          });
+        }
+      });
+    });
+  } else {
+    page2Lines.push({ font: 'F1', size: 10, text: 'SECTION B — ADVANCED ANALYTICAL PROBLEMS', dy: -16 });
+    page2Lines.push({ font: 'F2', size: 8.5, text: 'Q5. Formulate the governing theoretical framework and derive boundary stability equations. [10 Marks]', dy: -14 });
+    page2Lines.push({ font: 'F2', size: 8.5, text: 'Q6. Perform asymptotic evaluation comparing classical closed forms against empirical metrics. [10 Marks]', dy: -14 });
+  }
+
+  // Content for Page 3: Official Answer Key & Step-by-Step Solutions
+  const page3Lines: Array<{ font: 'F1' | 'F2'; size: number; text: string; dy: number }> = [
+    { font: 'F1', size: 11, text: 'SECTION D — COMPLETE ANSWER KEY & MARKING SCHEME', dy: 0 },
+    { font: 'F2', size: 8, text: 'OFFICIAL DEMO SOLUTIONS PROVIDED FOR SELF-ASSESSMENT & REVISION', dy: -13 },
+    { font: 'F2', size: 8, text: '----------------------------------------------------------------------------------------------------------------------------', dy: -10 },
+  ];
+
+  // Collect all questions with answer keys
+  const allQuestionsWithAnswers = paper.sections
+    ? paper.sections.flatMap((s) => s.questions.filter((q) => q.answerKey || q.explanation))
+    : [];
+
+  if (allQuestionsWithAnswers.length > 0) {
+    allQuestionsWithAnswers.forEach((q) => {
+      page3Lines.push({
+        font: 'F1',
+        size: 8.5,
+        text: `Answer Q${q.questionNumber}: ${q.answerKey || 'Verified'}`,
+        dy: -14,
+      });
+      if (q.explanation) {
+        const wrappedExp = wrapText(`Explanation/Method: ${q.explanation}`, 78);
+        wrappedExp.forEach((wLine, expIdx) => {
+          page3Lines.push({
+            font: 'F2',
+            size: 8,
+            text: `  ${wLine}`,
+            dy: expIdx === 0 ? -11 : -9.5,
+          });
+        });
+      }
+    });
+  } else {
+    page3Lines.push({ font: 'F1', size: 9, text: 'Answer Key Summary Table:', dy: -14 });
+    page3Lines.push({ font: 'F2', size: 8.5, text: 'Q1: Option (B) | Q2: Option (A) | Q3: Option (B) | Q4: Option (A)', dy: -12 });
+    page3Lines.push({ font: 'F2', size: 8.5, text: 'Q5: Derivation satisfies boundary conservation laws with zero divergence.', dy: -12 });
+  }
+
+  page3Lines.push({ font: 'F2', size: 8, text: '----------------------------------------------------------------------------------------------------------------------------', dy: -16 });
+  page3Lines.push({ font: 'F1', size: 8.5, text: '*** END OF DEMO SAMPLE QUESTION PAPER & ANSWER KEY ***', dy: -14 });
+  page3Lines.push({ font: 'F2', size: 7.5, text: 'Universal Question Paper Hub - Verified Academic Practice Archive - https://universal-qph.edu', dy: -12 });
+
+  // Generate stream contents for the 3 pages
+  const createPageStream = (lines: Array<{ font: 'F1' | 'F2'; size: number; text: string; dy: number }>): string => {
+    let streamText = 'BT\n';
+    let isFirst = true;
+
+    for (const line of lines) {
+      const escaped = escapePdf(line.text);
+      if (isFirst) {
+        streamText += `/${line.font} ${line.size} Tf\n50 780 Td\n(${escaped}) Tj\n`;
+        isFirst = false;
+      } else {
+        streamText += `/${line.font} ${line.size} Tf\n0 ${line.dy} Td\n(${escaped}) Tj\n`;
+      }
+    }
+    streamText += 'ET';
+    return streamText;
+  };
+
+  const stream1 = createPageStream(page1Lines);
+  const stream2 = createPageStream(page2Lines);
+  const stream3 = createPageStream(page3Lines);
+
+  // Build the complete PDF 1.4 file
+  const objects: string[] = [];
+
+  // Object 1: Catalog
+  objects.push('1 0 obj\n<<\n  /Type /Catalog\n  /Pages 2 0 R\n>>\nendobj');
+
+  // Object 2: Pages
+  objects.push('2 0 obj\n<<\n  /Type /Pages\n  /Kids [3 0 R 5 0 R 7 0 R]\n  /Count 3\n>>\nendobj');
+
+  // Object 3: Page 1
+  objects.push(
+    '3 0 obj\n<<\n  /Type /Page\n  /Parent 2 0 R\n  /MediaBox [0 0 595 842]\n  /Contents 4 0 R\n  /Resources <<\n    /Font <<\n      /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>\n      /F2 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\n    >>\n  >>\n>>\nendobj'
+  );
+
+  // Object 4: Stream 1
+  objects.push(`4 0 obj\n<<\n  /Length ${stream1.length}\n>>\nstream\n${stream1}\nendstream\nendobj`);
+
+  // Object 5: Page 2
+  objects.push(
+    '5 0 obj\n<<\n  /Type /Page\n  /Parent 2 0 R\n  /MediaBox [0 0 595 842]\n  /Contents 6 0 R\n  /Resources <<\n    /Font <<\n      /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>\n      /F2 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\n    >>\n  >>\n>>\nendobj'
+  );
+
+  // Object 6: Stream 2
+  objects.push(`6 0 obj\n<<\n  /Length ${stream2.length}\n>>\nstream\n${stream2}\nendstream\nendobj`);
+
+  // Object 7: Page 3
+  objects.push(
+    '7 0 obj\n<<\n  /Type /Page\n  /Parent 2 0 R\n  /MediaBox [0 0 595 842]\n  /Contents 8 0 R\n  /Resources <<\n    /Font <<\n      /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>\n      /F2 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\n    >>\n  >>\n>>\nendobj'
+  );
+
+  // Object 8: Stream 3
+  objects.push(`8 0 obj\n<<\n  /Length ${stream3.length}\n>>\nstream\n${stream3}\nendstream\nendobj`);
+
+  // Assemble with exact byte offsets for xref
+  const header = '%PDF-1.4\n';
+  let body = '';
+  const offsets: number[] = [];
+
+  for (const obj of objects) {
+    offsets.push(header.length + body.length);
+    body += obj + '\n';
+  }
+
+  const startXref = header.length + body.length;
+
+  let xref = 'xref\n0 9\n0000000000 65535 f \n';
+  for (const offset of offsets) {
+    xref += String(offset).padStart(10, '0') + ' 00000 n \n';
+  }
+
+  const trailer = `trailer\n<<\n  /Size 9\n  /Root 1 0 R\n>>\nstartxref\n${startXref}\n%%EOF\n`;
+
+  const completePdf = header + body + xref + trailer;
+  return new Blob([completePdf], { type: 'application/pdf' });
+}
+
+/**
+ * Standard minimal PDF generator for compatibility
+ */
+export function generateMinimalExamPdfBlob(
+  title: string,
+  category: string = 'General',
+  year: string | number = '2024'
+): Blob {
+  return generateQuestionPaperPdfBlob({ title, category, year });
+}
+
+export function createDownloadUrlForPaper(paper: Partial<QuestionPaper>): string {
+  const blob = generateQuestionPaperPdfBlob(paper);
   return URL.createObjectURL(blob);
 }

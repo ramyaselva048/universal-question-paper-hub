@@ -77,15 +77,15 @@ export const AboutPage: React.FC = () => {
         </div>
 
         <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-          Universal Question Paper Hub is structured with a modular service boundary. The current implementation utilizes client-side simulated persistence and Firebase Authentication for public Google Sign-In. The data access contracts in <code className="bg-white px-1.5 py-0.5 rounded text-electric-violet font-mono text-xs">src/services/paperService.ts</code> are designed for seamless drop-in transition to a hosted PostgreSQL backend and Supabase Storage bucket.
+          Universal Question Paper Hub is structured with a modular service boundary. The current implementation provides instant public access with client-side simulated persistence. The data access contracts in <code className="bg-white px-1.5 py-0.5 rounded text-electric-violet font-mono text-xs">src/services/paperService.ts</code> are designed for seamless drop-in transition to a hosted PostgreSQL backend and cloud storage bucket.
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
           <div className="bg-white p-4 rounded-xl border border-slate-200/80 text-xs text-slate-700">
             <strong className="block text-deep-charcoal font-semibold mb-1">
-              • Public Google Sign-In
+              • Open Public Access
             </strong>
-            Integrated via Firebase Authentication with official Google popups and session continuity.
+            Instant search, online PDF viewing, and direct downloads with zero barriers or sign-in requirements.
           </div>
           <div className="bg-white p-4 rounded-xl border border-slate-200/80 text-xs text-slate-700">
             <strong className="block text-deep-charcoal font-semibold mb-1">
